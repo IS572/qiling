@@ -460,6 +460,52 @@ def ql_syscall_stat(ql, stat_path, stat_buf_ptr, *args, **kw):
     ql.os.definesyscall_return(regreturn)
 
 
+def ql_syscall_lstat64(ql, lstat_path, lstat_buf_ptr, *args, **kw):
+    lstat_file = (ql.mem.string(lstat_path))
+
+    real_path = ql.os.transform_to_real_path(lstat_file)
+    relative_path = ql.os.transform_to_relative_path(lstat_file)
+
+    if os.path.exists(real_path) == False:
+        regreturn = -1
+    else:
+        lstat_info = Lstat(real_path)
+
+        if ql.archtype== QL_ARCH.MIPS:
+            # pack fstatinfo
+            lstat_buf = ql.pack32(lstat_info.st_dev)
+            lstat_buf += ql.pack32(0) * 3
+            lstat_buf += ql.pack64(lstat_info.st_ino)
+            lstat_buf += ql.pack32(lstat_info.st_mode)
+            lstat_buf += ql.pack32(lstat_info.st_nlink)
+            lstat_buf += ql.pack32(lstat_info.st_uid)
+            lstat_buf += ql.pack32(lstat_info.st_gid)
+            lstat_buf += ql.pack32(lstat_info.st_rdev)
+            lstat_buf += ql.pack32(0) * 3
+            lstat_buf += ql.pack64(lstat_info.st_size)
+            lstat_buf += ql.pack32(int(lstat_info.st_atime))
+            lstat_buf += ql.pack32(0)
+            lstat_buf += ql.pack32(int(lstat_info.st_mtime))
+            lstat_buf += ql.pack32(0)
+            lstat_buf += ql.pack32(int(lstat_info.st_ctime))
+            lstat_buf += ql.pack32(0)
+            lstat_buf += ql.pack32(lstat_info.st_blksize)
+            lstat_buf += ql.pack64(lstat_info.st_blocks)
+            
+            regreturn = 0
+            ql.mem.write(lstat_buf_ptr, lstat_buf)
+        else:
+            # pack statinfo
+            ql.nprint('ql_syscall_lstat64 on this architecture is not implemented.')
+            regreturn = -1
+
+    ql.nprint("lstat64(%s, 0x%x) = %d" % (relative_path, lstat_buf_ptr, regreturn))
+    if regreturn == 0:
+        ql.dprint(D_INFO, "[+] lstat64() write completed")
+    else:
+        ql.dprint(D_INFO, "[!] lstat64() read/write fail")
+    ql.os.definesyscall_return(regreturn)
+
 def ql_syscall_lstat(ql, lstat_path, lstat_buf_ptr, *args, **kw):
     lstat_file = (ql.mem.string(lstat_path))
 
