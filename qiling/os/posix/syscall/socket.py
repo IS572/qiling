@@ -113,7 +113,11 @@ def ql_syscall_bind(ql, bind_fd, bind_addr, bind_addrlen,  *args, **kw):
     else:
         data = ql.mem.read(bind_addr, bind_addrlen)
 
-    sin_family = struct.unpack("<h", data[:2])[0] or ql.os.fd[bind_fd].family
+    if ql.archtype == QL_ARCH.MIPS and ql.archendian == QL_ENDIAN.EB:
+        sin_family = struct.unpack(">h", data[:2])[0] or ql.os.fd[bind_fd].family
+    else:
+        sin_family = struct.unpack("<h", data[:2])[0] or ql.os.fd[bind_fd].family
+
     port, host = struct.unpack(">HI", data[2:8])
     host = ql_bin_to_ip(host)
 
@@ -136,7 +140,7 @@ def ql_syscall_bind(ql, bind_fd, bind_addr, bind_addrlen,  *args, **kw):
         ql.os.fd[bind_fd].bind(('::1', port))
         host = "::1"
 
-    elif ql.bindtolocalhost == False:
+    elif ql.os.bindtolocalhost == False:
         ql.os.fd[bind_fd].bind((host, port))
 
     else:
