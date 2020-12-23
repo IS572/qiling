@@ -174,9 +174,10 @@ class QlGdb(QlDebugger, object):
                 nullfill    = "0" * int(self.ql.archbit / 4)
 
                 if self.ql.archtype== QL_ARCH.MIPS:
-                    if self.ql.archendian == QL_ENDIAN.EB:
+                    if self.ql.archendian == QL_ENDIAN.EL:
                         sp = self.addr_to_str(self.ql.reg.arch_sp, endian ="little")
                         pc = self.addr_to_str(self.ql.reg.arch_pc, endian ="little")
+                    self.ql.nprint('DEBUG: endian: %d, pc: %s, sp: %s' %(self.ql.archendian, pc, sp))
                     self.send('T%.2x%.2x:%s;%.2x:%s;' %(GDB_SIGNAL_TRAP, idhex, sp, pcid, pc))
                 else:    
                     self.send('T%.2x%.2x:%s;%.2x:%s;%.2x:%s;' %(GDB_SIGNAL_TRAP, idhex, nullfill, spid, sp, pcid, pc))
@@ -239,8 +240,8 @@ class QlGdb(QlDebugger, object):
                 elif self.ql.archtype == QL_ARCH.MIPS:
                     for reg in self.tables[QL_ARCH.MIPS][:38]:
                         r = self.ql.reg.read(reg)
-                        if self.ql.archendian == QL_ENDIAN.EB:
-                            tmp = self.addr_to_str(r, endian ="little")
+                        if self.ql.archendian == QL_ENDIAN.EL:
+                            tmp = self.addr_to_str(r, endian ="big")
                         else:
                             tmp = self.addr_to_str(r)    
                         s += tmp
