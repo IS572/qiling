@@ -103,21 +103,21 @@ def ql_syscall_setgroups(ql, gidsetsize, grouplist, *args, **kw):
 def ql_syscall_setgid(ql, *args, **kw):
     GID = ql.os.gid
     ql.nprint("setgid(%i)" % GID)
-    regreturn = GID
+    regreturn = 0
     ql.os.definesyscall_return(regreturn)
 
 
 def ql_syscall_setgid32(ql, *args, **kw):
     GID = ql.os.gid
     ql.nprint("setgid32(%i)" % GID)
-    regreturn = GID
+    regreturn = 0
     ql.os.definesyscall_return(regreturn)    
 
 
 def ql_syscall_setuid(ql, *args, **kw):
     UID = ql.os.uid
     ql.nprint("setuid(%i)" % UID)
-    regreturn = UID
+    regreturn = 0
     ql.os.definesyscall_return(regreturn)
 
 
@@ -634,6 +634,62 @@ def ql_syscall_unlinkat(ql, dirfd, pathname, flag, *args, **kw):
         regreturn = -1
     ql.os.definesyscall_return(regreturn)
 
+def ql_syscall_getdents64(ql, fd, dirp, nbytes, *args, **kw):
+    # TODO: not sure what is the meaning of d_off, should not be 0x0
+    # but works for the example code from linux manual.
+    def _type_mapping(ent):
+        methods_constants_d = {'is_fifo': 0x1, 'is_char_device': 0x2, 'is_dir': 0x4, 'is_block_device': 0x6,
+                                'is_file': 0x8, 'is_symlink': 0xa, 'is_socket': 0xc}
+        ent_p = pathlib.Path(ent.path) if isinstance(ent, os.DirEntry) else ent
+
+        for method, constant in methods_constants_d.items():
+            if getattr(ent_p, method, None)():
+                t = constant
+                break
+        else:
+            t = 0x0 # DT_UNKNOWN
+
+        return bytes([t])
+
+    if ql.os.fd[fd].tell() == 0:
+        n = ql.archbit // 8
+        total_size = 0
+        results = os.scandir(ql.os.fd[fd].name)
+        _ent_count = 0
+
+        for result in itertools.chain((pathlib.Path('.'), pathlib.Path('..')), results): # chain speical directories with the results
+            d_ino = result.inode() if isinstance(result, os.DirEntry) else result.stat().st_ino
+            d_off = 0x0
+            d_name = (result.name if isinstance(result, os.DirEntry) else result._str).encode() + b'\x00'
+            d_type = _type_mapping(result)
+            d_reclen = len(d_name) + 16 + 3
+
+            # should be aligned by 4 byte
+            d_reclen += 4 - d_reclen%4
+
+            if total_size+d_reclen > nbytes:
+                ql.dprint(D_INFO, "[+] Exceeds buffer size(nbytes: %x)" % nbytes)
+                break
+
+            ql.mem.write(dirp, ql.pack64(d_ino))
+            ql.mem.write(dirp+8, ql.pack64(d_off))
+            ql.mem.write(dirp+16, ql.pack16(d_reclen))
+            ql.mem.write(dirp+16+2, d_type)
+            ql.mem.write(dirp+16+2+1, d_name)
+            
+            dirp += d_reclen
+            total_size += d_reclen
+            _ent_count += 1
+
+        regreturn = total_size
+        ql.os.fd[fd].lseek(0, os.SEEK_END) # mark as end of file for dir_fd
+    else:
+        _ent_count = 0
+        regreturn = 0
+
+    ql.nprint("getdents64(%d, 0x%x, 0x%x) = %d" % (fd, dirp, nbytes, regreturn))
+    ql.dprint(D_INFO, "[+] getdents64(%d, /* %d entries */, 0x%x) = %d" % (fd, _ent_count, nbytes, regreturn))
+    ql.os.definesyscall_return(regreturn)
 
 def ql_syscall_getdents(ql, fd, dirp, count, *args, **kw):
     # TODO: not sure what is the meaning of d_off, should not be 0x0
