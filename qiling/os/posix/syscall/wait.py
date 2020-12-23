@@ -11,8 +11,10 @@ from qiling.os.filestruct import *
 from qiling.os.posix.const_mapping import *
 from qiling.exception import *
 from qiling.utils import *
+from ctypes import c_int
 
 def ql_syscall_wait4(ql, wait4_pid, wait4_wstatus, wait4_options, wait4_rusage, *args, **kw):
+    wait4_pid = c_int(wait4_pid).value
     spid, status, rusage = os.wait4(wait4_pid, wait4_options)
     if wait4_wstatus != 0:
         ql.mem.write(wait4_wstatus, ql.pack32(status))
