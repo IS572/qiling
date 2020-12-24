@@ -42,6 +42,9 @@ class QlOsLinux(QlOsPosix):
         # MIPS32
         elif self.ql.archtype== QL_ARCH.MIPS:      
             self.ql.hook_intno(self.hook_syscall, 17)
+
+            # Some binaries are raising `break` interrupt on terminating
+            self.ql.hook_intno(self.hook_break, 18)
             self.thread_class = QlLinuxMIPS32Thread
 
         # ARM64
@@ -68,6 +71,10 @@ class QlOsLinux(QlOsPosix):
        
     def hook_syscall(self, int= None, intno= None):
         return self.load_syscall(intno)
+
+    def hook_break(self, int= None, intno= None):
+        self.ql.nprint('[Interrupt Handler] Got a BREAK Interrupt. Exiting')
+        os._exit(0)
 
     def add_function_hook(self, fn, cb, userdata = None):
         self.function_hook_tmp.append((fn, cb, userdata))
