@@ -11,6 +11,7 @@ from qiling.os.filestruct import *
 from qiling.os.posix.const_mapping import *
 from qiling.exception import *
 from qiling.os.stat import *
+import errno
 
 def ql_syscall_chmod(ql, filename, mode, null1, null2, null3, null4):
     regreturn = 0
@@ -64,6 +65,8 @@ def ql_syscall_fstatat64(ql, fstatat64_fd, fstatat64_fname, fstatat64_buf, fstat
         fstat64_buf += ql.pack64(0)
         ql.mem.write(fstatat64_buf,fstat64_buf)
         regreturn = 0
+    else:
+        regreturn = - errno.ENOENT
 
     ql.nprint("fstatat64(0x%x, %s) = %d" % (fstatat64_fd, relative_path, regreturn))
 
@@ -333,7 +336,7 @@ def ql_syscall_stat64(ql, stat64_pathname, stat64_buf_ptr, *args, **kw):
     real_path = ql.os.transform_to_real_path(stat64_file)
     relative_path = ql.os.transform_to_relative_path(stat64_file)
     if os.path.exists(real_path) == False:
-        regreturn = -1
+        regreturn = - errno.ENOENT
     else:
         stat64_info = Stat(real_path)
 
@@ -407,7 +410,7 @@ def ql_syscall_stat(ql, stat_path, stat_buf_ptr, *args, **kw):
     relative_path = ql.os.transform_to_relative_path(stat_file)
 
     if os.path.exists(real_path) == False:
-        regreturn = -1
+        regreturn = - errno.ENOENT
     else:
         stat_info = Stat(real_path)
 
@@ -467,7 +470,7 @@ def ql_syscall_lstat64(ql, lstat_path, lstat_buf_ptr, *args, **kw):
     relative_path = ql.os.transform_to_relative_path(lstat_file)
 
     if os.path.exists(real_path) == False:
-        regreturn = -1
+        regreturn = - errno.ENOENT
     else:
         lstat_info = Lstat(real_path)
 
@@ -513,7 +516,7 @@ def ql_syscall_lstat(ql, lstat_path, lstat_buf_ptr, *args, **kw):
     relative_path = ql.os.transform_to_relative_path(lstat_file)
 
     if os.path.exists(real_path) == False:
-        regreturn = -1
+        regreturn = - errno.ENOENT
     else:
         lstat_info = Lstat(real_path)
 
