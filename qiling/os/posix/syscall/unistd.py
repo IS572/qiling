@@ -15,6 +15,7 @@ from qiling.os.filestruct import *
 from qiling.os.posix.const_mapping import *
 from qiling.exception import *
 from qiling.os.stat import *
+import errno
 
 def ql_syscall_exit(ql, exit_code, *args, **kw):
     ql.os.exit_code = exit_code
@@ -129,7 +130,7 @@ def ql_syscall_faccessat(ql, faccessat_dfd, faccessat_filename, faccessat_mode, 
 
     regreturn = -1
     if os.path.exists(real_path) == False:
-        regreturn = -1
+        regreturn = - errno.ENOENT
     elif stat.S_ISFIFO(Stat(real_path).st_mode):
         regreturn = 0
     else:
@@ -203,7 +204,7 @@ def ql_syscall_access(ql, access_path, access_mode, *args, **kw):
     relative_path = ql.os.transform_to_relative_path(path)
 
     if os.path.exists(real_path) == False:
-        regreturn = -1
+        regreturn = - errno.ENOENT
     else:
         regreturn = 0
 
@@ -298,7 +299,7 @@ def ql_syscall_readlink(ql, path_name, path_buff, path_buffsize, *args, **kw):
     relative_path = ql.os.transform_to_relative_path(pathname)
 
     if os.path.exists(real_path) == False:
-        regreturn = -1
+        regreturn = - errno.ENOENT
     elif relative_path == '/proc/self/exe':
         FILEPATH = ql.path
         localpath = os.path.abspath(FILEPATH)
@@ -339,7 +340,7 @@ def ql_syscall_chdir(ql, path_name, *args, **kw):
             ql.os.current_path = relative_path
         ql.nprint("chdir(%s) = %d"% (relative_path, regreturn))
     else:
-        regreturn = -1
+        regreturn = - errno.ENOENT
         ql.nprint("chdir(%s) = %d : Not Found" % (relative_path, regreturn))
     ql.os.definesyscall_return(regreturn)
 
@@ -352,7 +353,7 @@ def ql_syscall_readlinkat(ql, readlinkat_dfd, readlinkat_path, readlinkat_buf, r
     relative_path = ql.os.transform_to_relative_path(pathname)
 
     if os.path.exists(real_path) == False:
-        regreturn = -1
+        regreturn = - errno.ENOENT
     elif relative_path == '/proc/self/exe':
         FILEPATH = ql.path
         localpath = os.path.abspath(FILEPATH)
@@ -609,7 +610,7 @@ def ql_syscall_unlink(ql, unlink_pathname, *args, **kw):
             regreturn = 0
         except FileNotFoundError:
             ql.dprint(D_INFO, '[!] No such file or directory')
-            regreturn = -1
+            regreturn = - errno.ENOENT
         except:
             regreturn = -1
     else:
