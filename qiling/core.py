@@ -33,6 +33,8 @@ class Qiling(QlCoreStructs, QlCoreHooks, QlCoreUtils):
             log_split=None,
             append=None,
             libcache = False,
+            is_execved = False,
+            follow_execve = False,
             stdin=0,
             stdout=0,
             stderr=0,
@@ -76,6 +78,8 @@ class Qiling(QlCoreStructs, QlCoreHooks, QlCoreUtils):
         self.multithread = False
         self.root = False
         self.filter = None
+        self.is_execved = is_execved
+        self.follow_execve = follow_execve
 
         """
         Qiling Framework Core Engine
@@ -179,7 +183,10 @@ class Qiling(QlCoreStructs, QlCoreHooks, QlCoreUtils):
 
         # init debugger
         if self.debugger != False and self.debugger != None:
-            self.debugger = self.debugger_setup()
+            if self.is_execved is False:
+                self.debugger = self.debugger_setup()
+            else:
+                self.debugger.reset_gdb()
 
         # patch binary
         self.__enable_bin_patch()

@@ -49,6 +49,7 @@ class QlGdb(QlDebugger, object):
         self.exe_abspath    = (os.path.abspath(self.ql.filename[0]))
         self.rootfs_abspath = (os.path.abspath(self.ql.rootfs)) 
         self.gdb            = QlGdbUtils()
+        self.is_execved     = False
 
         if ip == None:
             ip = '127.0.0.1'
@@ -69,6 +70,7 @@ class QlGdb(QlDebugger, object):
         self.gdb.initialize(self.ql, exit_point=exit_point, mappings=[(hex(load_address))])
         
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((ip, port))
         sock.listen(1)
         clientsocket, addr = sock.accept()
@@ -96,6 +98,26 @@ class QlGdb(QlDebugger, object):
             QL_ARCH.ARM64   : list({**arm64_reg_map}.keys()),
             QL_ARCH.MIPS    : list({**mips_reg_map}.keys()),
         }
+
+    def stop_gdb(self):
+        self.ql.nprint('gdb> Sending signal to notify target process has been terminated.')
+        self.send("W00")
+
+    def reset_gdb(self):
+        self.is_execved     = True
+        self.exe_abspath    = (os.path.abspath(self.ql.filename[0]))
+        self.rootfs_abspath = (os.path.abspath(self.ql.rootfs)) 
+
+        load_address = self.ql.loader.load_address
+        exit_point = load_address + os.path.getsize(self.ql.path)
+
+        self.gdb.initialize(self.ql, exit_point=exit_point, mappings=[(hex(load_address))])
+
+        if self.ql.ostype in (QL_OS.LINUX, QL_OS.FREEBSD) and not self.ql.shellcoder:
+            self.entry_point = self.ql.os.elf_entry
+        else:
+            self.entry_point = self.ql.os.entry_point
+        self.gdb.bp_insert(self.entry_point)
 
     def addr_to_str(self, addr, short=False, endian="big"):
         if self.ql.archbit == 64 and short == False:
@@ -146,9 +168,16 @@ class QlGdb(QlDebugger, object):
 
     def run(self):
 
-        while self.receive() == 'Good':
-            pkt = self.last_pkt
-            self.send_raw('+')
+        while self.is_execved or self.receive() == 'Good':
+
+            if self.is_execved is False:
+                pkt = self.last_pkt
+                self.send_raw('+')
+            else:
+                self.is_execved = False
+                self.ql.nprint('sending gdb trap!')
+                self.send(('S%.2x' % GDB_SIGNAL_TRAP))
+                continue
 
             def handle_qmark(subcmd):
                 def gdbqmark_converter(arch):

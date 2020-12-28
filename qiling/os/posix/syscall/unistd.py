@@ -455,6 +455,11 @@ def ql_syscall_execve(ql, execve_pathname, execve_argv, execve_envp, *args, **kw
     if ql.shellcoder:
         return
 
+    if ql.follow_execve is True:
+        ql.is_execved = True
+    else:
+        ql.debugger.stop_gdb()
+
     ql.loader.argv      = argv
     ql.loader.env       = env
     ql.path             = real_path
