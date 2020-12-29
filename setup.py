@@ -68,7 +68,7 @@ setup(
     keywords='qiling binary emulator framework malware analysis UEFI IoT',
 
     packages=find_packages(),
-    scripts=['qltool'],
+    scripts=['qltool', 'ql'],
     include_package_data=True,
     install_requires=requirements,
 )
