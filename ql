@@ -151,6 +151,7 @@ if __name__ == '__main__':
     else:
         print("ERROR: Command error!")
         usage()
+        exit(0)
 
     # attach Qdb at entry point
     if options.qdb == True:
